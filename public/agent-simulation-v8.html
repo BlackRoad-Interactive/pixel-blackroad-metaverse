@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Simulation v8 - RELATIONSHIPS! | BlackRoad Pixel Metaverse</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      color: #fff;
+    }
+    #canvas {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      border: 2px solid #FF1D6C;
+    }
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      border: 2px solid #F5A623;
+      border-radius: 4px;
+      font-size: 11px;
+      min-width: 280px;
+    }
+    .stat { margin: 5px 0; color: #2979FF; }
+    .stat strong { color: #FF1D6C; }
+    #agent-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.95);
+      padding: 15px;
+      border: 2px solid #9C27B0;
+      border-radius: 4px;
+      width: 360px;
+      font-size: 11px;
+      display: none;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #agent-panel.active { display: block; }
+    .need-bar {
+      margin: 8px 0;
+      background: #222;
+      height: 16px;
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+    .need-bar-fill {
+      height: 100%;
+      transition: width 0.3s;
+      border-radius: 3px;
+    }
+    .need-label {
+      position: absolute;
+      left: 6px;
+      top: 1px;
+      font-size: 10px;
+      font-weight: bold;
+      color: #000;
+      text-shadow: 0 0 2px #fff;
+      z-index: 2;
+    }
+    .trait { 
+      display: inline-block;
+      background: #2979FF;
+      padding: 3px 8px;
+      border-radius: 3px;
+      margin: 2px;
+      font-size: 9px;
+    }
+    .memory {
+      font-size: 9px;
+      color: #4ECDC4;
+      margin: 4px 0;
+      padding: 4px;
+      background: rgba(78, 205, 196, 0.1);
+      border-left: 2px solid #4ECDC4;
+    }
+    .skill {
+      display: inline-block;
+      margin: 3px;
+      padding: 4px 8px;
+      background: #9C27B0;
+      border-radius: 3px;
+      font-size: 9px;
+    }
+    .emotion-badge {
+      display: inline-block;
+      background: #FF1D6C;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin: 4px 0;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      border: 2px solid #52FF52;
+      border-radius: 4px;
+    }
+    button {
+      background: #FF1D6C;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      margin: 3px;
+      font-weight: bold;
+    }
+    button:hover { background: #F5A623; }
+    button:active { transform: scale(0.95); }
+    #event-log {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 15px;
+      border: 2px solid #4ECDC4;
+      border-radius: 4px;
+      width: 320px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 10px;
+    }
+    .event {
+      margin: 4px 0;
+      padding: 4px;
+      background: rgba(78, 205, 196, 0.1);
+      border-left: 2px solid #4ECDC4;
+      color: #4ECDC4;
+    }
+    .emotion-happy { color: #FFD700; }
+    .emotion-sad { color: #4169E1; }
+    .emotion-angry { color: #FF4444; }
+    .emotion-excited { color: #FF1D6C; }
+    .emotion-stressed { color: #9C27B0; }
+    .emotion-tired { color: #888; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="1280" height="720"></canvas>
+  
+  <div id="hud">
+    <div style="color: #FF1D6C; font-size: 14px; font-weight: bold; margin-bottom: 8px;">
+      🌌 BLACKROAD PIXEL METAVERSE v8
+    </div>
+    <div style="color: #F5A623; font-size: 11px; margin-bottom: 10px;">
+      💕 RELATIONSHIPS & SOCIAL DYNAMICS 💕
+    </div>
+    <div class="stat"><strong>Agents:</strong> <span id="agent-count">0</span></div>
+    <div class="stat"><strong>Game Time:</strong> <span id="game-time">12:00 AM</span></div>
+    <div class="stat"><strong>Speed:</strong> <span id="speed">1x</span></div>
+    <div class="stat"><strong>Relationships:</strong> <span id="relationship-count">0</span></div>
+    <div class="stat"><strong>Marriages:</strong> <span id="marriage-count">0</span></div>
+    <div style="margin-top: 10px; font-size: 9px; color: #888;">
+      Click agent to see details<br>
+      Watch emotions come alive!
+    </div>
+  </div>
+
+  <div id="agent-panel"></div>
+
+  <div id="controls">
+    <div style="color: #52FF52; font-weight: bold; margin-bottom: 8px;">CONTROLS</div>
+    <button onclick="togglePause()">⏯ Pause/Play</button>
+    <button onclick="setSpeed(1)">1x</button>
+    <button onclick="setSpeed(2)">2x</button>
+    <button onclick="setSpeed(4)">4x</button>
+    <button onclick="triggerRandomEvent()">🎲 Random Event</button>
+  </div>
+
+  <div id="event-log">
+    <div style="color: #4ECDC4; font-weight: bold; margin-bottom: 8px;">📊 EVENT LOG</div>
+  </div>
+
+  <script>
+    // ========================================
+    // CANVAS SETUP
+    // ========================================
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const WORLD_WIDTH = 1280;
+    const WORLD_HEIGHT = 720;
+    const GRID_SIZE = 50; // For pathfinding
+
+    // ========================================
+    // GAME STATE
+    // ========================================
+    let agents = [];
+    let furniture = [];
+    let particles = [];
+    let buildings = [];
+    let lots = [];
+    let relationships = new Map(); // TODO 61: agent1_id -> agent2_id -> relationship
+    let selectedAgent = null;
+    let isPaused = false;
+    let gameSpeed = 1;
+    let gameTime = 0;
+    let eventCounter = 0;
+    let parties = []; // TODO 67: Active parties
+
+    // ========================================
+    // PARTICLE CLASS (TODO 39)
+    // ========================================
+    class Particle {
+      constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type; // 'sparkle', 'heart', 'tear', 'steam', 'sweat', 'star', 'z'
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = -Math.random() * 2 - 1;
+        this.life = 60;
+        this.maxLife = 60;
+        this.size = Math.random() * 3 + 2;
+        this.alpha = 1;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.1; // Gravity
+        this.life--;
+        this.alpha = this.life / this.maxLife;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        
+        switch(this.type) {
+          case 'sparkle':
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText('✨', this.x, this.y);
+            break;
+          case 'heart':
+            ctx.fillStyle = '#FF1D6C';
+            ctx.fillText('❤️', this.x, this.y);
+            break;
+          case 'tear':
+            ctx.fillStyle = '#4169E1';
+            ctx.fillText('💧', this.x, this.y);
+            break;
+          case 'steam':
+            ctx.fillStyle = '#FF4444';
+            ctx.fillText('💢', this.x, this.y);
+            break;
+          case 'sweat':
+            ctx.fillStyle = '#9C27B0';
+            ctx.fillText('💦', this.x, this.y);
+            break;
+          case 'star':
+            ctx.fillStyle = '#FF1D6C';
+            ctx.fillText('⭐', this.x, this.y);
+            break;
+          case 'z':
+            ctx.fillStyle = '#888';
+            ctx.fillText('💤', this.x, this.y);
+            break;
+        }
+        
+        ctx.restore();
+      }
+
+      isDead() {
+        return this.life <= 0;
+      }
+    }
+
+    // ========================================
+    // RELATIONSHIP CLASS (TODOs 61-70)
+    // ========================================
+    class Relationship {
+      constructor(agent1, agent2) {
+        this.agent1 = agent1;
+        this.agent2 = agent2;
+        this.level = 0; // 0-100 (TODO 61)
+        this.type = 'stranger'; // stranger, acquaintance, friend, best-friend, romantic, married, family, enemy
+        this.status = 'single'; // single, dating, married (TODO 63, 64)
+        this.interactions = 0;
+        this.lastInteraction = 0;
+        this.topics = []; // Conversation topics discussed (TODO 62)
+        this.gifts = []; // Gifts exchanged (TODO 70)
+        this.conflicts = 0; // Number of fights (TODO 68)
+        this.gossip = []; // Gossip shared (TODO 69)
+      }
+      
+      updateLevel(amount) {
+        this.level = Math.max(-100, Math.min(100, this.level + amount));
+        
+        // Update type based on level
+        if (this.type === 'married') {
+          // Married stays married unless level < -50
+          if (this.level < -50) this.type = 'enemy';
+        } else if (this.type === 'family') {
+          // Family is permanent
+        } else if (this.level < -30) {
+          this.type = 'enemy';
+        } else if (this.level < 0) {
+          this.type = 'stranger';
+        } else if (this.level < 20) {
+          this.type = 'acquaintance';
+        } else if (this.level < 50) {
+          this.type = 'friend';
+        } else if (this.level < 80) {
+          this.type = 'best-friend';
+        } else if (this.type !== 'romantic' && this.type !== 'married') {
+          this.type = 'romantic'; // High level can become romantic
+        }
+      }
+      
+      getEmoji() {
+        switch(this.type) {
+          case 'best-friend': return '💙';
+          case 'friend': return '👋';
+          case 'romantic': return '💖';
+          case 'married': return '💍';
+          case 'family': return '👨‍👩‍👧';
+          case 'enemy': return '💢';
+          default: return '😐';
+        }
+      }
+    }
+
+    // ========================================
+    // BUILDING & LOT CLASSES (TODOs 51-60)
+    // ========================================
+    
+    // Lot types: residential, commercial, community
+    class Lot {
+      constructor(x, y, width, height, type, name) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.type = type; // 'residential', 'commercial', 'community'
+        this.name = name;
+        this.building = null; // Will contain a Building
+        this.color = type === 'residential' ? '#2a4a2a' :
+                     type === 'commercial' ? '#4a2a2a' : '#2a2a4a';
+      }
+      
+      draw(ctx) {
+        // Draw lot boundary
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        
+        // Draw lot name
+        ctx.fillStyle = '#888';
+        ctx.font = '9px "Courier New"';
+        ctx.fillText(this.name, this.x + 5, this.y + 12);
+      }
+    }
+    
+    class Building {
+      constructor(x, y, width, height, type, emoji, name) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.type = type; // 'house', 'apartment', 'shop', 'restaurant', 'office', 'park', 'entertainment'
+        this.emoji = emoji;
+        this.name = name;
+        this.rooms = []; // Array of rooms
+        this.owner = null; // Agent who owns/rents
+        this.isPublic = ['shop', 'restaurant', 'office', 'park', 'entertainment'].includes(type);
+      }
+      
+      draw(ctx) {
+        // Draw building
+        ctx.fillStyle = '#3a3a3a';
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+        
+        // Draw outline
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.width, this.height);
+        
+        // Draw door
+        const doorX = this.x + this.width / 2 - 8;
+        const doorY = this.y + this.height - 20;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(doorX, doorY, 16, 20);
+        
+        // Draw emoji on building
+        ctx.font = '24px Arial';
+        ctx.fillText(this.emoji, this.x + this.width / 2 - 12, this.y + 30);
+        
+        // Draw building name
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px "Courier New"';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x + this.width / 2, this.y + this.height + 15);
+        ctx.textAlign = 'left';
+      }
+    }
+    
+    class Room {
+      constructor(x, y, width, height, type, building) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.type = type; // 'bedroom', 'living', 'kitchen', 'bathroom'
+        this.building = building;
+        this.furniture = []; // Furniture in this room
+      }
+    }
+
+    // ========================================
+    // A* PATHFINDING
+    // ========================================
+    class Pathfinder {
+      static findPath(startX, startY, endX, endY, furniture) {
+        const startNode = {
+          x: Math.floor(startX / GRID_SIZE),
+          y: Math.floor(startY / GRID_SIZE),
+          g: 0,
+          h: 0,
+          f: 0,
+          parent: null
+        };
+        
+        const endNode = {
+          x: Math.floor(endX / GRID_SIZE),
+          y: Math.floor(endY / GRID_SIZE)
+        };
+
+        const openList = [startNode];
+        const closedList = [];
+        
+        while (openList.length > 0) {
+          openList.sort((a, b) => a.f - b.f);
+          const current = openList.shift();
+          
+          if (current.x === endNode.x && current.y === endNode.y) {
+            const path = [];
+            let temp = current;
+            while (temp) {
+              path.unshift({ x: temp.x * GRID_SIZE + GRID_SIZE/2, y: temp.y * GRID_SIZE + GRID_SIZE/2 });
+              temp = temp.parent;
+            }
+            return path;
+          }
+          
+          closedList.push(current);
+          
+          const neighbors = [
+            { x: current.x + 1, y: current.y },
+            { x: current.x - 1, y: current.y },
+            { x: current.x, y: current.y + 1 },
+            { x: current.x, y: current.y - 1 }
+          ];
+          
+          for (const neighborPos of neighbors) {
+            if (neighborPos.x < 0 || neighborPos.x >= Math.floor(WORLD_WIDTH / GRID_SIZE) ||
+                neighborPos.y < 0 || neighborPos.y >= Math.floor(WORLD_HEIGHT / GRID_SIZE)) {
+              continue;
+            }
+            
+            const isBlocked = furniture.some(f => {
+              const fx = Math.floor(f.x / GRID_SIZE);
+              const fy = Math.floor(f.y / GRID_SIZE);
+              return fx === neighborPos.x && fy === neighborPos.y;
+            });
+            
+            if (isBlocked) continue;
+            
+            if (closedList.some(n => n.x === neighborPos.x && n.y === neighborPos.y)) continue;
+            
+            const g = current.g + 1;
+            const h = Math.abs(neighborPos.x - endNode.x) + Math.abs(neighborPos.y - endNode.y);
+            const f = g + h;
+            
+            const existing = openList.find(n => n.x === neighborPos.x && n.y === neighborPos.y);
+            if (existing && existing.g <= g) continue;
+            
+            const neighbor = {
+              x: neighborPos.x,
+              y: neighborPos.y,
+              g, h, f,
+              parent: current
+            };
+            
+            if (existing) {
+              openList.splice(openList.indexOf(existing), 1);
+            }
+            openList.push(neighbor);
+          }
+        }
+        
+        return null;
+      }
+    }
+
+    // ========================================
+    // AGENT CLASS
+    // ========================================
+    class SimAgent {
+      constructor(x, y, id) {
+        this.x = x;
+        this.y = y;
+        this.id = id;
+        this.name = this.generateName();
+        
+        // Needs (0-100)
+        this.hunger = Math.random() * 40 + 40;
+        this.energy = Math.random() * 40 + 40;
+        this.mood = Math.random() * 40 + 40;
+        this.social = Math.random() * 40 + 40;
+        this.hygiene = Math.random() * 40 + 40;
+        this.health = 100;
+        
+        // Personality traits
+        this.traits = this.generateTraits();
+        
+        // State
+        this.action = null;
+        this.actionProgress = 0;
+        this.actionDuration = 0;
+        this.target = null;
+        this.path = [];
+        this.speed = 2;
+        
+        // Memory
+        this.memories = [];
+        
+        // Favorite activity (expanded with autonomous actions)
+        const activities = ['eat', 'sleep', 'socialize', 'shower', 'browse', 'watch-tv', 'read', 'paint', 'exercise', 'cook', 'play-music', 'write', 'play-game', 'clean'];
+        this.favorite = activities[Math.floor(Math.random() * activities.length)];
+        
+        // Hobby (for autonomous action selection when mood is good)
+        const hobbies = ['browse', 'watch-tv', 'read', 'paint', 'exercise', 'cook', 'play-music', 'write', 'play-game'];
+        this.hobby = hobbies[Math.floor(Math.random() * hobbies.length)];
+        
+        // Skills (expanded for autonomous actions)
+        this.skills = {
+          eating: 0,
+          sleeping: 0,
+          socializing: 0,
+          hygiene: 0,
+          logic: 0,       // TODO 41, 43
+          creativity: 0,  // TODO 44
+          fitness: 0,     // TODO 45
+          cooking: 0,     // TODO 46
+          music: 0,       // TODO 47
+          writing: 0,     // TODO 48
+          gaming: 0       // TODO 49
+        };
+        
+        // Daily routine
+        this.lastRoutineTime = null;
+        this.routineCompleted = false;
+        
+        // Age
+        this.age = 0;
+        
+        // Health/Sickness
+        this.isSick = false;
+        this.sickTimer = 0;
+        
+        // NEW: Emotion state (TODOs 31-37)
+        this.emotion = 'neutral'; // happy, sad, angry, excited, stressed, tired, sick
+        this.emotionTimer = 0;
+        this.bounceOffset = 0; // For happy bounce
+        this.shakeOffset = { x: 0, y: 0 }; // For stressed shake
+        
+        // NEW: Thought bubble (TODO 38)
+        this.thoughtBubble = null;
+        this.thoughtTimer = 0;
+        
+        // Particle spawn timer
+        this.particleTimer = 0;
+        
+        // NEW: Home & location (TODO 51)
+        this.home = null; // Assigned building
+        this.currentLot = null; // Current lot they're on
+        this.workplace = null; // Assigned workplace (TODO 58)
+        
+        // NEW: Relationships & Social (TODOs 61-70)
+        this.relationshipStatus = 'single'; // single, dating, married (TODO 63, 64)
+        this.partner = null; // Current romantic partner (TODO 63)
+        this.spouse = null; // Married spouse (TODO 64)
+        this.family = []; // Family members (TODO 65)
+        this.bestFriends = []; // Best friends (TODO 66)
+        this.currentConversation = null; // Active conversation partner (TODO 62)
+        this.conversationTopic = null; // Topic being discussed (TODO 62)
+        this.conversationTimer = 0;
+        this.lastGift = null; // Last gift received (TODO 70)
+        this.partyHost = false; // Hosting a party (TODO 67)
+        this.partyGuest = null; // Attending party (TODO 67)
+        this.knownGossip = []; // Gossip they know (TODO 69)
+      }
+
+      generateName() {
+        const firsts = ['Alex', 'Sam', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery'];
+        const lasts = ['Smith', 'Johnson', 'Code', 'Dev', 'Tech', 'Byte', 'Data', 'Web'];
+        return `${firsts[Math.floor(Math.random() * firsts.length)]} ${lasts[Math.floor(Math.random() * lasts.length)]}`;
+      }
+
+      generateTraits() {
+        const allTraits = ['friendly', 'shy', 'energetic', 'lazy', 'neat', 'messy', 'foodie', 'efficient'];
+        const count = Math.floor(Math.random() * 3) + 2;
+        const selected = [];
+        for (let i = 0; i < count; i++) {
+          const trait = allTraits[Math.floor(Math.random() * allTraits.length)];
+          if (!selected.includes(trait)) selected.push(trait);
+        }
+        return selected;
+      }
+
+      // NEW: Get or create relationship with another agent (TODO 61)
+      getRelationship(otherAgent) {
+        const key = `${this.id}_${otherAgent.id}`;
+        const reverseKey = `${otherAgent.id}_${this.id}`;
+        
+        if (relationships.has(key)) return relationships.get(key);
+        if (relationships.has(reverseKey)) return relationships.get(reverseKey);
+        
+        // Create new relationship
+        const rel = new Relationship(this, otherAgent);
+        relationships.set(key, rel);
+        return rel;
+      }
+      
+      // NEW: Start conversation (TODO 62)
+      startConversation(otherAgent) {
+        const topics = ['hobbies', 'work', 'weather', 'movies', 'food', 'sports', 'music', 'games', 'gossip', 'flirt'];
+        this.currentConversation = otherAgent;
+        this.conversationTopic = topics[Math.floor(Math.random() * topics.length)];
+        this.conversationTimer = 180; // 3 seconds
+        
+        otherAgent.currentConversation = this;
+        otherAgent.conversationTopic = this.conversationTopic;
+        otherAgent.conversationTimer = 180;
+        
+        // Update relationship
+        const rel = this.getRelationship(otherAgent);
+        rel.interactions++;
+        rel.lastInteraction = gameTime;
+        rel.topics.push(this.conversationTopic);
+        
+        // Gain social and improve relationship
+        this.social = Math.min(100, this.social + 5);
+        otherAgent.social = Math.min(100, otherAgent.social + 5);
+        
+        // Relationship boost based on topic and traits
+        let boost = 5;
+        if (this.conversationTopic === 'flirt' && rel.type === 'romantic') boost = 15; // TODO 63
+        if (this.conversationTopic === 'gossip') boost = 3; // TODO 69
+        if (this.traits.includes('friendly')) boost += 2;
+        
+        rel.updateLevel(boost);
+        
+        this.addMemory(`Had ${this.conversationTopic} conversation with ${otherAgent.name}`, 'social');
+      }
+
+      // NEW: Give gift (TODO 70)
+      giveGift(otherAgent) {
+        const gifts = ['flowers 💐', 'chocolate 🍫', 'book 📚', 'music 🎵', 'art 🎨', 'food 🍕'];
+        const gift = gifts[Math.floor(Math.random() * gifts.length)];
+        
+        const rel = this.getRelationship(otherAgent);
+        rel.gifts.push({ from: this.name, item: gift, time: gameTime });
+        
+        otherAgent.lastGift = gift;
+        otherAgent.mood = Math.min(100, otherAgent.mood + 10);
+        
+        // Major relationship boost
+        rel.updateLevel(20);
+        
+        this.mood = Math.min(100, this.mood + 5);
+        this.addMemory(`Gave ${gift} to ${otherAgent.name}`, 'social');
+        otherAgent.addMemory(`Received ${gift} from ${this.name}!`, 'social');
+      }
+      
+      // NEW: Start conflict (TODO 68)
+      startConflict(otherAgent) {
+        const rel = this.getRelationship(otherAgent);
+        rel.conflicts++;
+        
+        // Relationship damage
+        rel.updateLevel(-25);
+        
+        // Become angry temporarily
+        this.emotion = 'angry';
+        this.emotionTimer = 300; // 5 seconds
+        otherAgent.emotion = 'angry';
+        otherAgent.emotionTimer = 300;
+        
+        // Mood decrease
+        this.mood = Math.max(0, this.mood - 20);
+        otherAgent.mood = Math.max(0, otherAgent.mood - 20);
+        
+        this.addMemory(`Had argument with ${otherAgent.name}`, 'social');
+        otherAgent.addMemory(`Had argument with ${this.name}`, 'social');
+        
+        // Create gossip (TODO 69)
+        const gossip = `${this.name} and ${otherAgent.name} had a fight!`;
+        this.knownGossip.push(gossip);
+        otherAgent.knownGossip.push(gossip);
+      }
+
+      // NEW: Update emotion based on needs/events (TODOs 31-37)
+      updateEmotion() {
+        const criticalNeeds = [this.hunger, this.energy, this.hygiene].filter(n => n < 20).length;
+        
+        if (this.isSick) {
+          this.emotion = 'sick';
+        } else if (this.energy < 25) {
+          this.emotion = 'tired'; // TODO 36
+        } else if (criticalNeeds >= 2) {
+          this.emotion = 'stressed'; // TODO 35
+        } else if (this.mood < 30) {
+          this.emotion = 'sad'; // TODO 32
+        } else if (this.emotionTimer > 0) {
+          // Keep temporary emotion (excited or angry)
+          this.emotionTimer--;
+        } else if (this.mood > 80) {
+          this.emotion = 'happy'; // TODO 31
+        } else {
+          this.emotion = 'neutral';
+        }
+        
+        // Update bounce animation for happy
+        if (this.emotion === 'happy') {
+          this.bounceOffset = Math.sin(Date.now() / 200) * 5;
+        } else {
+          this.bounceOffset = 0;
+        }
+        
+        // Update shake animation for stressed
+        if (this.emotion === 'stressed') {
+          this.shakeOffset.x = (Math.random() - 0.5) * 4;
+          this.shakeOffset.y = (Math.random() - 0.5) * 4;
+        } else {
+          this.shakeOffset.x = 0;
+          this.shakeOffset.y = 0;
+        }
+      }
+
+      // NEW: Spawn emotion particles (TODO 39)
+      spawnParticles() {
+        this.particleTimer++;
+        if (this.particleTimer < 15) return; // Spawn every 15 frames
+        this.particleTimer = 0;
+        
+        switch(this.emotion) {
+          case 'happy':
+            particles.push(new Particle(this.x, this.y - 20, 'sparkle'));
+            break;
+          case 'sad':
+            particles.push(new Particle(this.x, this.y - 10, 'tear'));
+            break;
+          case 'angry':
+            particles.push(new Particle(this.x + 20, this.y - 20, 'steam'));
+            break;
+          case 'excited':
+            particles.push(new Particle(this.x, this.y - 25, 'star'));
+            break;
+          case 'stressed':
+            particles.push(new Particle(this.x - 15, this.y - 15, 'sweat'));
+            break;
+          case 'tired':
+            particles.push(new Particle(this.x + 15, this.y - 20, 'z'));
+            break;
+        }
+      }
+
+      // NEW: Update thought bubble (TODO 38)
+      updateThoughtBubble() {
+        this.thoughtTimer++;
+        if (this.thoughtTimer < 120) return; // Change thought every 2 seconds
+        this.thoughtTimer = 0;
+        
+        // Show the most critical need
+        const needs = [
+          { name: 'hunger', value: this.hunger, icon: '🍔' },
+          { name: 'energy', value: this.energy, icon: '⚡' },
+          { name: 'hygiene', value: this.hygiene, icon: '🚿' },
+          { name: 'social', value: this.social, icon: '👥' },
+          { name: 'mood', value: this.mood, icon: '😊' }
+        ];
+        
+        needs.sort((a, b) => a.value - b.value);
+        this.thoughtBubble = needs[0].icon;
+      }
+
+      update(deltaTime) {
+        if (isPaused) return;
+        
+        const speed = gameSpeed;
+        
+        // Update emotion state
+        this.updateEmotion();
+        
+        // Spawn emotion particles
+        this.spawnParticles();
+        
+        // Update thought bubble
+        this.updateThoughtBubble();
+        
+        // Age increment
+        this.age += 0.001 * speed;
+        
+        // Game time
+        gameTime += 0.016 * speed;
+        
+        // Need decay with personality modifiers
+        let hungerDecay = -0.02 * speed;
+        let energyDecay = -0.015 * speed;
+        let hygieneDecay = -0.012 * speed;
+        let moodDecay = -0.01 * speed;
+        let socialDecay = -0.008 * speed;
+        
+        if (this.traits.includes('friendly')) socialDecay *= 1.2;
+        if (this.traits.includes('shy')) socialDecay *= 0.7;
+        if (this.traits.includes('energetic')) energyDecay *= 0.8;
+        if (this.traits.includes('lazy')) energyDecay *= 1.3;
+        if (this.traits.includes('neat')) hygieneDecay *= 0.7;
+        if (this.traits.includes('messy')) hygieneDecay *= 1.4;
+        if (this.traits.includes('foodie')) hungerDecay *= 1.2;
+        
+        // If sick, needs decay faster
+        if (this.isSick) {
+          hungerDecay *= 1.5;
+          energyDecay *= 1.5;
+          hygieneDecay *= 1.5;
+          moodDecay *= 2;
+          
+          this.sickTimer--;
+          if (this.sickTimer <= 0) {
+            this.isSick = false;
+            this.health = Math.min(100, this.health + 50);
+            this.addMemory('Recovered from sickness! 🎉', 'health');
+            logEvent(`${this.name} recovered from sickness! 🎉`);
+          }
+        }
+        
+        this.hunger = Math.max(0, Math.min(100, this.hunger + hungerDecay));
+        this.energy = Math.max(0, Math.min(100, this.energy + energyDecay));
+        this.hygiene = Math.max(0, Math.min(100, this.hygiene + hygieneDecay));
+        this.mood = Math.max(0, Math.min(100, this.mood + moodDecay));
+        this.social = Math.max(0, Math.min(100, this.social + socialDecay));
+        
+        // Health decay if other needs are critical
+        if (this.hunger < 10 || this.energy < 10 || this.hygiene < 10) {
+          this.health = Math.max(0, this.health - 0.05 * speed);
+          
+          // Chance to get sick
+          if (this.health < 30 && Math.random() < 0.001 && !this.isSick) {
+            this.isSick = true;
+            this.sickTimer = 300;
+            this.addMemory('Got sick! 🤒', 'health');
+            logEvent(`${this.name} got sick! 🤒`);
+          }
+        } else {
+          // Natural health recovery
+          this.health = Math.min(100, this.health + 0.02 * speed);
+        }
+        
+        // Check daily routine
+        this.checkDailyRoutine();
+        
+        // Decide action if idle
+        if (!this.action) {
+          this.decideAction();
+        }
+        
+        // Execute action
+        if (this.action) {
+          if (this.path && this.path.length > 0) {
+            this.followPath(speed);
+          } else if (this.target) {
+            const dist = Math.hypot(this.target.x - this.x, this.target.y - this.y);
+            if (dist < 10) {
+              this.performAction(speed);
+            }
+          }
+        }
+      }
+
+      checkDailyRoutine() {
+        const hour = Math.floor(gameTime / 3600) % 24;
+        const timeOfDay = hour >= 6 && hour < 12 ? 'morning' :
+                         hour >= 12 && hour < 18 ? 'afternoon' :
+                         hour >= 18 && hour < 22 ? 'evening' : 'night';
+        
+        if (this.lastRoutineTime !== timeOfDay) {
+          this.lastRoutineTime = timeOfDay;
+          this.routineCompleted = false;
+        }
+        
+        if (!this.routineCompleted && !this.action) {
+          let routineAction = null;
+          
+          switch(timeOfDay) {
+            case 'morning':
+              if (this.hunger < 80) routineAction = 'eat';
+              break;
+            case 'afternoon':
+              if (this.social < 80) routineAction = 'socialize';
+              break;
+            case 'evening':
+              if (this.hunger < 80) routineAction = 'eat';
+              break;
+            case 'night':
+              if (this.energy < 80) routineAction = 'sleep';
+              break;
+          }
+          
+          if (routineAction) {
+            this.startAction(routineAction, true);
+            this.routineCompleted = true;
+          }
+        }
+      }
+
+      decideAction() {
+        const needs = [
+          { name: 'eat', value: this.hunger, threshold: 30 },
+          { name: 'sleep', value: this.energy, threshold: 30 },
+          { name: 'socialize', value: this.social, threshold: 40 },
+          { name: 'shower', value: this.hygiene, threshold: 35 }
+        ];
+        
+        needs.sort((a, b) => a.value - b.value);
+        
+        // If happy and all needs are satisfied, do hobby (TODO 41-50)
+        if (this.mood > 70 && needs[0].value > needs[0].threshold && Math.random() < 0.3) {
+          this.startAction(this.hobby);
+          return;
+        }
+        
+        // If happy, sometimes do favorite activity
+        if (this.mood > 60 && Math.random() < 0.1) {
+          this.startAction(this.favorite);
+          return;
+        }
+        
+        // If bored (mood low but needs OK), do a fun activity
+        if (this.mood < 50 && needs[0].value > 40 && Math.random() < 0.2) {
+          const funActivities = ['watch-tv', 'play-game', 'read', 'paint', 'play-music'];
+          const activity = funActivities[Math.floor(Math.random() * funActivities.length)];
+          this.startAction(activity);
+          return;
+        }
+        
+        // Otherwise, address most critical need
+        if (needs[0].value < needs[0].threshold) {
+          this.startAction(needs[0].name);
+        }
+      }
+
+      startAction(actionType, isRoutine = false) {
+        const targetFurn = this.findNearestFurniture(actionType);
+        if (!targetFurn) return;
+        
+        this.action = actionType;
+        this.target = targetFurn;
+        this.actionProgress = 0;
+        
+        // Calculate action duration based on skill
+        const skillName = actionType === 'eat' ? 'eating' :
+                         actionType === 'sleep' ? 'sleeping' :
+                         actionType === 'socialize' ? 'socializing' : 'hygiene';
+        
+        const skillBonus = Math.floor(this.skills[skillName] / 5);
+        this.actionDuration = Math.max(60, 120 - skillBonus);
+        
+        // Find path
+        this.path = Pathfinder.findPath(this.x, this.y, targetFurn.x, targetFurn.y, furniture);
+        
+        const routineText = isRoutine ? ' (routine)' : '';
+        this.addMemory(`Going to ${actionType}${routineText}`, 'action');
+      }
+
+      findNearestFurniture(type) {
+        // Map action types to furniture types
+        const typeMap = {
+          'browse': 'computer',
+          'watch-tv': 'tv',
+          'read': 'bookshelf',
+          'paint': 'easel',
+          'exercise': 'gym',
+          'cook': 'stove',
+          'play-music': 'piano',
+          'write': 'desk',
+          'play-game': 'arcade',
+          'clean': null // Cleaning doesn't need furniture
+        };
+        
+        const furnType = typeMap[type] || type;
+        
+        // If cleaning, return random position
+        if (!furnType) {
+          return { x: Math.random() * 1000 + 100, y: Math.random() * 500 + 100, type: 'clean' };
+        }
+        
+        const matching = furniture.filter(f => f.type === furnType);
+        if (matching.length === 0) return null;
+        
+        matching.sort((a, b) => {
+          const distA = Math.hypot(a.x - this.x, a.y - this.y);
+          const distB = Math.hypot(b.x - this.x, b.y - this.y);
+          return distA - distB;
+        });
+        
+        return matching[0];
+      }
+
+      followPath(speed) {
+        if (!this.path || this.path.length === 0) return;
+        
+        const waypoint = this.path[0];
+        const dx = waypoint.x - this.x;
+        const dy = waypoint.y - this.y;
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < 10) {
+          this.path.shift();
+          return;
+        }
+        
+        // Modify speed based on emotion
+        let moveSpeed = this.speed * speed;
+        if (this.emotion === 'tired') moveSpeed *= 0.7; // Slower when tired
+        if (this.isSick) moveSpeed *= 0.5; // Much slower when sick
+        if (this.emotion === 'excited') moveSpeed *= 1.3; // Faster when excited
+        
+        this.x += (dx / dist) * moveSpeed;
+        this.y += (dy / dist) * moveSpeed;
+      }
+
+      performAction(speed) {
+        this.actionProgress += speed;
+        
+        if (this.actionProgress >= this.actionDuration) {
+          this.completeAction();
+        }
+      }
+
+      completeAction() {
+        const isFavorite = this.action === this.favorite;
+        const effectiveness = isFavorite ? 1.5 : 1;
+        
+        // Map actions to skills
+        const skillMap = {
+          'eat': 'eating',
+          'sleep': 'sleeping',
+          'socialize': 'socializing',
+          'shower': 'hygiene',
+          'browse': 'logic',       // TODO 41
+          'read': 'logic',          // TODO 43
+          'paint': 'creativity',    // TODO 44
+          'exercise': 'fitness',    // TODO 45
+          'cook': 'cooking',        // TODO 46
+          'play-music': 'music',    // TODO 47
+          'write': 'writing',       // TODO 48
+          'play-game': 'gaming',    // TODO 49
+          'clean': 'hygiene'        // TODO 50
+        };
+        
+        const skillName = skillMap[this.action] || 'hygiene';
+        
+        // Improve skill
+        if (this.skills[skillName] !== undefined) {
+          this.skills[skillName] = Math.min(100, this.skills[skillName] + 2);
+          
+          // Notify on skill milestones
+          if (this.skills[skillName] % 20 === 0 && this.skills[skillName] > 0) {
+            logEvent(`${this.name} reached ${skillName} level ${this.skills[skillName]}! 📈`);
+          }
+        }
+        
+        // Apply effects based on action type
+        switch(this.action) {
+          case 'eat':
+            this.hunger = Math.min(100, this.hunger + 40 * effectiveness);
+            this.mood += isFavorite ? 15 : 10;
+            this.addMemory(isFavorite ? 'Had an amazing meal! 😋' : 'Ate some food', 'action');
+            break;
+            
+          case 'sleep':
+            this.energy = Math.min(100, this.energy + 50 * effectiveness);
+            this.mood += isFavorite ? 15 : 5;
+            this.health = Math.min(100, this.health + 10);
+            this.addMemory(isFavorite ? 'Best sleep ever! 😴' : 'Took a nap', 'action');
+            break;
+            
+          case 'socialize':
+            this.social = Math.min(100, this.social + 35 * effectiveness);
+            this.mood += isFavorite ? 15 : 10;
+            this.addMemory(isFavorite ? 'Amazing conversation! 🎉' : 'Had a chat', 'social');
+            break;
+            
+          case 'shower':
+            this.hygiene = Math.min(100, this.hygiene + 45 * effectiveness);
+            this.mood += isFavorite ? 15 : 8;
+            this.addMemory(isFavorite ? 'Refreshing shower! 🚿' : 'Got clean', 'action');
+            break;
+            
+          // TODO 41: Browse web
+          case 'browse':
+            this.mood += isFavorite ? 20 : 12;
+            this.addMemory(isFavorite ? 'Amazing browsing session! 💻' : 'Browsed the web', 'action');
+            break;
+            
+          // TODO 42: Watch TV
+          case 'watch-tv':
+            this.mood += isFavorite ? 25 : 15;
+            this.energy = Math.max(0, this.energy - 5); // Slightly tiring
+            this.addMemory(isFavorite ? 'Loved that show! 📺' : 'Watched TV', 'action');
+            break;
+            
+          // TODO 43: Read books
+          case 'read':
+            this.mood += isFavorite ? 20 : 12;
+            this.addMemory(isFavorite ? 'Great book! 📚' : 'Did some reading', 'action');
+            break;
+            
+          // TODO 44: Paint/create art
+          case 'paint':
+            this.mood += isFavorite ? 25 : 18;
+            this.addMemory(isFavorite ? 'Created a masterpiece! 🎨' : 'Painted something', 'action');
+            break;
+            
+          // TODO 45: Exercise
+          case 'exercise':
+            this.mood += isFavorite ? 20 : 15;
+            this.energy = Math.min(100, this.energy + 10); // Energizing!
+            this.health = Math.min(100, this.health + 5);
+            this.addMemory(isFavorite ? 'Amazing workout! 🏋️' : 'Did some exercise', 'action');
+            break;
+            
+          // TODO 46: Cook meals
+          case 'cook':
+            this.hunger = Math.min(100, this.hunger + 50 * effectiveness);
+            this.mood += isFavorite ? 20 : 12;
+            this.addMemory(isFavorite ? 'Cooked a delicious meal! 🍳' : 'Cooked something', 'action');
+            break;
+            
+          // TODO 47: Play instrument
+          case 'play-music':
+            this.mood += isFavorite ? 25 : 18;
+            this.addMemory(isFavorite ? 'Beautiful music! 🎹' : 'Played some music', 'action');
+            break;
+            
+          // TODO 48: Write stories
+          case 'write':
+            this.mood += isFavorite ? 20 : 15;
+            this.addMemory(isFavorite ? 'Wrote an amazing story! ✍️' : 'Did some writing', 'action');
+            break;
+            
+          // TODO 49: Play games
+          case 'play-game':
+            this.mood += isFavorite ? 25 : 18;
+            this.addMemory(isFavorite ? 'High score! 🎮' : 'Played some games', 'action');
+            break;
+            
+          // TODO 50: Clean/tidy
+          case 'clean':
+            this.hygiene = Math.min(100, this.hygiene + 20);
+            this.mood += isFavorite ? 20 : 10;
+            this.addMemory(isFavorite ? 'Place looks amazing! 🧹' : 'Did some cleaning', 'action');
+            break;
+        }
+        
+        this.action = null;
+        this.target = null;
+        this.path = [];
+      }
+
+      addMemory(text, type = 'general') {
+        const time = new Date().toLocaleTimeString();
+        this.memories.push({ text, type, time, gameTime: Math.floor(gameTime) });
+        if (this.memories.length > 30) this.memories.shift();
+      }
+
+      draw(ctx) {
+        ctx.save();
+        
+        // Apply shake offset for stressed
+        ctx.translate(this.shakeOffset.x, this.shakeOffset.y);
+        
+        // Draw sprite with emotion-based color tints
+        ctx.fillStyle = this.getEmotionColor();
+        
+        // Draw as circle with face (TODO 40)
+        const yOffset = this.bounceOffset; // Bounce for happy
+        ctx.beginPath();
+        ctx.arc(this.x, this.y + yOffset, 32, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw facial expression based on emotion
+        ctx.fillStyle = '#000';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const face = this.getEmotionFace();
+        ctx.fillText(face, this.x, this.y + yOffset);
+        
+        // Draw name
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px "Courier New"';
+        ctx.fillText(this.name, this.x, this.y - 45);
+        
+        // Draw thought bubble (TODO 38)
+        if (this.thoughtBubble) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.beginPath();
+          ctx.arc(this.x + 25, this.y - 35, 15, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.fillStyle = '#000';
+          ctx.font = '14px Arial';
+          ctx.fillText(this.thoughtBubble, this.x + 25, this.y - 35);
+        }
+        
+        // Draw sick emoji if sick
+        if (this.isSick) {
+          ctx.fillStyle = '#fff';
+          ctx.font = '16px Arial';
+          ctx.fillText('🤒', this.x - 25, this.y - 30);
+        }
+        
+        // Draw action progress bar
+        if (this.action && this.actionProgress > 0) {
+          const progress = this.actionProgress / this.actionDuration;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(this.x - 25, this.y + 40, 50, 6);
+          ctx.fillStyle = '#52FF52';
+          ctx.fillRect(this.x - 25, this.y + 40, 50 * progress, 6);
+        }
+        
+        // Draw relationship indicators (TODO 61-70)
+        // Show heart/ring icon if married or dating
+        if (this.spouse) {
+          ctx.font = '16px Arial';
+          ctx.fillText('💍', this.x + 30, this.y - 25);
+        } else if (this.partner) {
+          ctx.font = '16px Arial';
+          ctx.fillText('💖', this.x + 30, this.y - 25);
+        }
+        
+        // Show conversation bubble (TODO 62)
+        if (this.currentConversation) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+          ctx.beginPath();
+          ctx.arc(this.x - 30, this.y - 30, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#000';
+          ctx.font = '12px Arial';
+          ctx.fillText('💬', this.x - 30, this.y - 30);
+          
+          // Draw line to conversation partner
+          ctx.strokeStyle = '#FF1D6C';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(this.x, this.y);
+          ctx.lineTo(this.currentConversation.x, this.currentConversation.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        
+        ctx.restore();
+      }
+
+      getEmotionColor() {
+        switch(this.emotion) {
+          case 'happy': return '#FFD700'; // Gold
+          case 'sad': return '#4169E1'; // Blue
+          case 'angry': return '#FF4444'; // Red
+          case 'excited': return '#FF1D6C'; // Hot pink
+          case 'stressed': return '#9C27B0'; // Purple
+          case 'tired': return '#888888'; // Gray
+          case 'sick': return '#FF6B6B'; // Light red
+          default: return '#4ECDC4'; // Cyan
+        }
+      }
+
+      getEmotionFace() {
+        switch(this.emotion) {
+          case 'happy': return '😊';
+          case 'sad': return '😢';
+          case 'angry': return '😠';
+          case 'excited': return '🤩';
+          case 'stressed': return '😰';
+          case 'tired': return '😴';
+          case 'sick': return '🤒';
+          default: return '😐';
+        }
+      }
+    }
+
+    // ========================================
+    // WORLD CREATION (TODOs 51-60)
+    // ========================================
+    function createWorld() {
+      // Create lots first
+      
+      // RESIDENTIAL ZONE (Left side) - TODO 51, 52, 53
+      lots.push(new Lot(50, 50, 250, 200, 'residential', 'Residential 1'));
+      lots.push(new Lot(50, 270, 250, 200, 'residential', 'Residential 2'));
+      lots.push(new Lot(50, 490, 250, 200, 'residential', 'Residential 3'));
+      
+      // COMMERCIAL ZONE (Center) - TODO 56, 57
+      lots.push(new Lot(350, 50, 200, 150, 'commercial', 'Shopping District'));
+      lots.push(new Lot(350, 220, 200, 150, 'commercial', 'Restaurant Row'));
+      lots.push(new Lot(350, 390, 200, 150, 'commercial', 'Office Plaza'));
+      
+      // COMMUNITY ZONE (Right side) - TODO 54, 55, 59
+      lots.push(new Lot(600, 50, 250, 200, 'community', 'Central Park'));
+      lots.push(new Lot(600, 270, 250, 180, 'community', 'Entertainment'));
+      lots.push(new Lot(600, 470, 250, 220, 'community', 'Community Center'));
+      
+      // MORE RESIDENTIAL (Far right) - TODO 53
+      lots.push(new Lot(900, 50, 350, 300, 'residential', 'Apartment Complex'));
+      lots.push(new Lot(900, 370, 350, 320, 'residential', 'Housing District'));
+      
+      // Create buildings on lots
+      
+      // Houses (TODO 51, 52)
+      const house1 = new Building(70, 80, 100, 120, 'house', '🏠', 'Blue House');
+      const house2 = new Building(190, 80, 100, 120, 'house', '🏠', 'Red House');
+      const house3 = new Building(70, 300, 100, 120, 'house', '🏠', 'Green House');
+      const house4 = new Building(190, 300, 100, 120, 'house', '🏡', 'Yellow House');
+      const house5 = new Building(70, 520, 100, 120, 'house', '🏠', 'White House');
+      const house6 = new Building(190, 520, 100, 120, 'house', '🏡', 'Pink House');
+      
+      buildings.push(house1, house2, house3, house4, house5, house6);
+      
+      // Apartments (TODO 53)
+      const apt1 = new Building(920, 80, 150, 240, 'apartment', '🏢', 'Sunset Apartments');
+      const apt2 = new Building(1090, 80, 140, 240, 'apartment', '🏢', 'Sky Tower');
+      const apt3 = new Building(920, 400, 150, 250, 'apartment', '🏢', 'Garden Apartments');
+      const apt4 = new Building(1090, 400, 140, 250, 'apartment', '🏢', 'Harbor View');
+      
+      buildings.push(apt1, apt2, apt3, apt4);
+      
+      // Shops (TODO 56)
+      const shop1 = new Building(370, 70, 80, 100, 'shop', '🏪', 'Grocery');
+      const shop2 = new Building(460, 70, 80, 100, 'shop', '🏪', 'Electronics');
+      
+      buildings.push(shop1, shop2);
+      
+      // Restaurants (TODO 57)
+      const restaurant1 = new Building(370, 240, 80, 100, 'restaurant', '☕', 'Cafe');
+      const restaurant2 = new Building(460, 240, 80, 100, 'restaurant', '🍕', 'Pizza Place');
+      
+      buildings.push(restaurant1, restaurant2);
+      
+      // Offices (TODO 58)
+      const office1 = new Building(370, 410, 80, 110, 'office', '🏢', 'Tech Corp');
+      const office2 = new Building(460, 410, 80, 110, 'office', '🏢', 'Finance Co');
+      
+      buildings.push(office1, office2);
+      
+      // Park (TODO 55)
+      const park = new Building(620, 70, 210, 160, 'park', '🌳', 'Central Park');
+      buildings.push(park);
+      
+      // Entertainment (TODO 59)
+      const theater = new Building(620, 290, 100, 130, 'entertainment', '🎭', 'Theater');
+      const arcade = new Building(730, 290, 100, 130, 'entertainment', '🎮', 'Mega Arcade');
+      const gym = new Building(620, 490, 210, 170, 'entertainment', '🏋️', 'Fitness Center');
+      
+      buildings.push(theater, arcade, gym);
+      
+      // Assign homes to agents (will be done after agents are created)
+    }
+    
+    // ========================================
+    // FURNITURE (EXPANDED FOR AUTONOMOUS ACTIONS)
+    // ========================================
+    function createFurniture() {
+      furniture = [
+        // Basic needs
+        { type: 'eat', x: 200, y: 150, emoji: '🍔', label: 'Fridge 1' },
+        { type: 'eat', x: 1000, y: 150, emoji: '🍔', label: 'Fridge 2' },
+        { type: 'sleep', x: 200, y: 550, emoji: '🛏️', label: 'Bed 1' },
+        { type: 'sleep', x: 1000, y: 550, emoji: '🛏️', label: 'Bed 2' },
+        { type: 'socialize', x: 500, y: 300, emoji: '🛋️', label: 'Couch 1' },
+        { type: 'socialize', x: 700, y: 300, emoji: '🛋️', label: 'Couch 2' },
+        { type: 'shower', x: 500, y: 550, emoji: '🚿', label: 'Shower 1' },
+        { type: 'shower', x: 700, y: 550, emoji: '🚿', label: 'Shower 2' },
+        
+        // Autonomous action objects (TODOs 41-50)
+        { type: 'computer', x: 350, y: 150, emoji: '💻', label: 'Computer' },
+        { type: 'tv', x: 850, y: 300, emoji: '📺', label: 'TV' },
+        { type: 'bookshelf', x: 150, y: 350, emoji: '📚', label: 'Bookshelf' },
+        { type: 'easel', x: 1100, y: 350, emoji: '🎨', label: 'Easel' },
+        { type: 'gym', x: 350, y: 450, emoji: '🏋️', label: 'Gym' },
+        { type: 'stove', x: 650, y: 150, emoji: '🍳', label: 'Stove' },
+        { type: 'piano', x: 150, y: 650, emoji: '🎹', label: 'Piano' },
+        { type: 'desk', x: 850, y: 450, emoji: '✍️', label: 'Writing Desk' },
+        { type: 'arcade', x: 1100, y: 650, emoji: '🎮', label: 'Arcade' }
+      ];
+    }
+
+    // ========================================
+    // RANDOM EVENTS (TODO 18)
+    // ========================================
+    const eventTypes = [
+      { name: 'Found Money', emoji: '💰', effects: { mood: 25 } },
+      { name: 'Bad News', emoji: '😢', effects: { mood: -30, social: -15 } },
+      { name: 'Great Day', emoji: '🌟', effects: { mood: 20, energy: 15 } },
+      { name: 'Surprise Party', emoji: '🎉', effects: { mood: 25, social: 20 }, emotion: 'excited' },
+      { name: 'Got Sick', emoji: '🤒', effects: { health: -30 }, makeSick: true },
+      { name: 'Good Sleep', emoji: '😴', effects: { energy: 20, mood: 10 } },
+      { name: 'Food Poisoning', emoji: '🤢', effects: { hunger: -25, health: -20 }, makeSick: true },
+      { name: 'Made a Friend', emoji: '🤝', effects: { social: 20, mood: 15 }, emotion: 'excited' }
+    ];
+
+    function triggerRandomEvent() {
+      if (agents.length === 0) return;
+      
+      const agent = agents[Math.floor(Math.random() * agents.length)];
+      const event = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+      
+      // Apply effects
+      for (const [stat, value] of Object.entries(event.effects)) {
+        if (stat === 'mood') agent.mood = Math.max(0, Math.min(100, agent.mood + value));
+        if (stat === 'social') agent.social = Math.max(0, Math.min(100, agent.social + value));
+        if (stat === 'energy') agent.energy = Math.max(0, Math.min(100, agent.energy + value));
+        if (stat === 'hunger') agent.hunger = Math.max(0, Math.min(100, agent.hunger + value));
+        if (stat === 'health') agent.health = Math.max(0, Math.min(100, agent.health + value));
+      }
+      
+      // Set temporary emotion
+      if (event.emotion) {
+        agent.emotion = event.emotion;
+        agent.emotionTimer = 180; // 3 seconds
+      }
+      
+      // Make sick
+      if (event.makeSick && !agent.isSick) {
+        agent.isSick = true;
+        agent.sickTimer = 300;
+      }
+      
+      agent.addMemory(`Event: ${event.name} ${event.emoji}`, 'event');
+      logEvent(`${agent.name}: ${event.name} ${event.emoji}`);
+      
+      eventCounter++;
+    }
+
+    // Auto-trigger random events
+    setInterval(() => {
+      if (!isPaused && Math.random() < 0.3) {
+        triggerRandomEvent();
+      }
+    }, 10000);
+
+    // ========================================
+    // COLLISION & SOCIAL INTERACTIONS (TODOs 12, 62-70)
+    // ========================================
+    function handleCollisions() {
+      for (let i = 0; i < agents.length; i++) {
+        for (let j = i + 1; j < agents.length; j++) {
+          const a = agents[i];
+          const b = agents[j];
+          const dist = Math.hypot(a.x - b.x, a.y - b.y);
+          const minDist = 64;
+          
+          if (dist < minDist) {
+            // Push apart
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const pushDist = (minDist - dist) / 2;
+            const angle = Math.atan2(dy, dx);
+            
+            a.x -= Math.cos(angle) * pushDist;
+            a.y -= Math.sin(angle) * pushDist;
+            b.x += Math.cos(angle) * pushDist;
+            b.y += Math.sin(angle) * pushDist;
+            
+            // Social interaction (expanded for relationships)
+            const rel = a.getRelationship(b);
+            
+            // 30% chance of social interaction
+            if (Math.random() < 0.3 && !a.currentConversation && !b.currentConversation) {
+              // Decide interaction type based on relationship
+              if (rel.type === 'enemy' && Math.random() < 0.4) {
+                // TODO 68: Conflicts
+                a.startConflict(b);
+              } else if (rel.type === 'romantic' && Math.random() < 0.2) {
+                // TODO 63: Romantic interaction (flirt conversation)
+                a.conversationTopic = 'flirt';
+                a.startConversation(b);
+              } else if (Math.random() < 0.1) {
+                // TODO 70: Gift giving (10% chance)
+                a.giveGift(b);
+              } else {
+                // TODO 62: Normal conversation
+                a.startConversation(b);
+              }
+            }
+            
+            // Share gossip (TODO 69)
+            if (Math.random() < 0.05 && a.knownGossip.length > 0) {
+              const gossip = a.knownGossip[Math.floor(Math.random() * a.knownGossip.length)];
+              if (!b.knownGossip.includes(gossip)) {
+                b.knownGossip.push(gossip);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // ========================================
+    // EVENT LOG
+    // ========================================
+    function logEvent(message) {
+      const log = document.getElementById('event-log');
+      const entry = document.createElement('div');
+      entry.className = 'event';
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.appendChild(entry);
+      
+      // Keep only last 20 events
+      while (log.children.length > 21) {
+        log.removeChild(log.children[1]);
+      }
+      
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    function init() {
+      createWorld(); // Create buildings and lots first
+      createFurniture();
+      
+      // Create 8 agents and assign homes
+      const homes = buildings.filter(b => b.type === 'house' || b.type === 'apartment');
+      for (let i = 0; i < 8; i++) {
+        const x = Math.random() * (WORLD_WIDTH - 100) + 50;
+        const y = Math.random() * (WORLD_HEIGHT - 100) + 50;
+        const agent = new SimAgent(x, y, i);
+        
+        // Assign home
+        if (i < homes.length) {
+          agent.home = homes[i];
+          homes[i].owner = agent;
+        }
+        
+        // Assign workplace (offices)
+        const offices = buildings.filter(b => b.type === 'office');
+        if (offices.length > 0) {
+          agent.workplace = offices[i % offices.length];
+        }
+        
+        agents.push(agent);
+      }
+      
+      logEvent('🌌 Pixel Metaverse v8 initialized with RELATIONSHIPS & SOCIAL!');
+      logEvent('💕 Agents can now form friendships, date, and get married!');
+      logEvent('💬 Watch for conversations, conflicts, and gossip spreading!');
+    }
+
+    // ========================================
+    // RENDER
+    // ========================================
+    function render() {
+      // Clear
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+      
+      // Draw lots (TODO 54-60)
+      lots.forEach(l => l.draw(ctx));
+      
+      // Draw buildings (TODO 51-60)
+      buildings.forEach(b => b.draw(ctx));
+      
+      // Draw sidewalks/paths (TODO 60) - simple grid lines
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([5, 5]);
+      
+      // Vertical paths
+      ctx.beginPath();
+      ctx.moveTo(320, 0);
+      ctx.lineTo(320, WORLD_HEIGHT);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(570, 0);
+      ctx.lineTo(570, WORLD_HEIGHT);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(870, 0);
+      ctx.lineTo(870, WORLD_HEIGHT);
+      ctx.stroke();
+      
+      // Horizontal paths
+      ctx.beginPath();
+      ctx.moveTo(0, 250);
+      ctx.lineTo(WORLD_WIDTH, 250);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(0, 480);
+      ctx.lineTo(WORLD_WIDTH, 480);
+      ctx.stroke();
+      
+      ctx.setLineDash([]);
+      
+      // Draw furniture
+      ctx.font = '32px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      furniture.forEach(f => {
+        ctx.fillText(f.emoji, f.x, f.y);
+        ctx.fillStyle = '#888';
+        ctx.font = '10px "Courier New"';
+        ctx.fillText(f.label, f.x, f.y + 30);
+        ctx.font = '32px Arial';
+      });
+      
+      // Draw particles
+      particles.forEach(p => p.draw(ctx));
+      
+      // Draw agents
+      agents.forEach(a => a.draw(ctx));
+      
+      // Update HUD
+      document.getElementById('agent-count').textContent = agents.length;
+      document.getElementById('relationship-count').textContent = relationships.size;
+      const marriedCount = agents.filter(a => a.spouse).length / 2; // Divide by 2 since both partners count
+      document.getElementById('marriage-count').textContent = Math.floor(marriedCount);
+      
+      const hour = Math.floor(gameTime / 3600) % 24;
+      const minute = Math.floor((gameTime % 3600) / 60);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      document.getElementById('game-time').textContent = `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+      document.getElementById('speed').textContent = `${gameSpeed}x`;
+      
+      // Update agent panel if one is selected
+      if (selectedAgent) {
+        updateAgentPanel(selectedAgent);
+      }
+    }
+
+    // ========================================
+    // AGENT PANEL
+    // ========================================
+    function updateAgentPanel(agent) {
+      const panel = document.getElementById('agent-panel');
+      panel.className = 'active';
+      
+      // Get emotion color class
+      const emotionClass = `emotion-${agent.emotion}`;
+      
+      panel.innerHTML = `
+        <div style="color: #9C27B0; font-size: 13px; font-weight: bold; margin-bottom: 10px;">
+          ${agent.name} <span class="${emotionClass}">${agent.getEmotionFace()}</span>
+        </div>
+        <div class="emotion-badge ${emotionClass}">
+          Feeling: ${agent.emotion.toUpperCase()} ${agent.getEmotionFace()}
+        </div>
+        <div style="margin: 10px 0; font-size: 9px; color: #888;">Age: ${Math.floor(agent.age)} days</div>
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #FF1D6C;">💕 RELATIONSHIPS</div>
+        <div style="margin-top: 5px; font-size: 10px;">
+          Status: ${agent.relationshipStatus} ${agent.spouse ? '💍' : agent.partner ? '💖' : ''}
+          ${agent.spouse ? `<br>💍 Married to: ${agent.spouse.name}` : ''}
+          ${agent.partner && !agent.spouse ? `<br>💖 Dating: ${agent.partner.name}` : ''}
+          ${agent.family.length > 0 ? `<br>👨‍👩‍👧 Family: ${agent.family.length}` : ''}
+          ${agent.bestFriends.length > 0 ? `<br>💙 Best friends: ${agent.bestFriends.length}` : ''}
+          ${agent.currentConversation ? `<br>💬 Talking with ${agent.currentConversation.name} about ${agent.conversationTopic}` : ''}
+          ${agent.lastGift ? `<br>🎁 Last gift: ${agent.lastGift}` : ''}
+        </div>
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #F5A623;">NEEDS</div>
+        ${createNeedBar('Hunger', agent.hunger, '#FF6B35')}
+        ${createNeedBar('Energy', agent.energy, '#FFD700')}
+        ${createNeedBar('Mood', agent.mood, '#FF1D6C')}
+        ${createNeedBar('Social', agent.social, '#2979FF')}
+        ${createNeedBar('Hygiene', agent.hygiene, '#4ECDC4')}
+        ${createNeedBar('Health', agent.health, '#52FF52')}
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #2979FF;">PERSONALITY</div>
+        <div style="margin-top: 5px;">
+          ${agent.traits.map(t => `<span class="trait">${t}</span>`).join('')}
+        </div>
+        <div style="margin-top: 5px; font-size: 9px; color: #F5A623;">
+          ⭐ Favorite: ${agent.favorite}
+        </div>
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #9C27B0;">SKILLS</div>
+        <div style="margin-top: 5px;">
+          ${Object.entries(agent.skills).map(([name, val]) => 
+            `<span class="skill">${name}: ${Math.floor(val)}%</span>`
+          ).join('')}
+        </div>
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #4ECDC4;">RECENT MEMORIES</div>
+        <div style="margin-top: 5px; max-height: 150px; overflow-y: auto;">
+          ${agent.memories.slice(-12).reverse().map(m => 
+            `<div class="memory">[${m.time}] ${m.text}</div>`
+          ).join('')}
+        </div>
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #52FF52;">STATUS</div>
+        <div style="margin-top: 5px; font-size: 10px;">
+          ${agent.action ? `🎯 Currently: ${agent.action}` : '💤 Idle'}
+          ${agent.isSick ? '<div style="color: #FF4444;">🤒 SICK (recovering...)</div>' : ''}
+          ${agent.emotion !== 'neutral' ? `<div class="${emotionClass}">Emotion: ${agent.emotion}</div>` : ''}
+        </div>
+        
+        <div style="margin-top: 12px; font-weight: bold; color: #F5A623;">LIVING</div>
+        <div style="margin-top: 5px; font-size: 10px;">
+          🏠 Home: ${agent.home ? agent.home.name : 'Homeless'}
+          <br>🏢 Work: ${agent.workplace ? agent.workplace.name : 'Unemployed'}
+        </div>
+        
+        <button onclick="selectedAgent = null; document.getElementById('agent-panel').className = '';" 
+                style="margin-top: 15px; width: 100%;">
+          Close
+        </button>
+      `;
+    }
+
+    function createNeedBar(label, value, color) {
+      return `
+        <div class="need-bar">
+          <div class="need-bar-fill" style="width: ${value}%; background: ${color};"></div>
+          <div class="need-label">${label}: ${Math.floor(value)}</div>
+        </div>
+      `;
+    }
+
+    // ========================================
+    // RELATIONSHIP PROGRESSION (TODOs 63-67)
+    // ========================================
+    function updateRelationships() {
+      agents.forEach(agent => {
+        // Update conversation timers
+        if (agent.conversationTimer > 0) {
+          agent.conversationTimer--;
+          if (agent.conversationTimer === 0) {
+            agent.currentConversation = null;
+            agent.conversationTopic = null;
+          }
+        }
+        
+        // Check for dating (TODO 63)
+        if (!agent.partner && !agent.spouse && Math.random() < 0.0001) {
+          // Find someone with high relationship level
+          const potentials = agents.filter(other => {
+            if (other === agent || other.spouse || other.partner) return false;
+            const rel = agent.getRelationship(other);
+            return rel.level > 70 && (rel.type === 'best-friend' || rel.type === 'romantic');
+          });
+          
+          if (potentials.length > 0) {
+            const chosen = potentials[Math.floor(Math.random() * potentials.length)];
+            agent.partner = chosen;
+            chosen.partner = agent;
+            agent.relationshipStatus = 'dating';
+            chosen.relationshipStatus = 'dating';
+            
+            const rel = agent.getRelationship(chosen);
+            rel.type = 'romantic';
+            rel.status = 'dating';
+            
+            agent.addMemory(`Started dating ${chosen.name}! 💖`, 'social');
+            chosen.addMemory(`Started dating ${agent.name}! 💖`, 'social');
+            logEvent(`💖 ${agent.name} and ${chosen.name} are now dating!`);
+          }
+        }
+        
+        // Check for marriage (TODO 64)
+        if (agent.partner && !agent.spouse && Math.random() < 0.00005) {
+          const rel = agent.getRelationship(agent.partner);
+          if (rel.level > 90 && rel.interactions > 20) {
+            // Get married!
+            agent.spouse = agent.partner;
+            agent.partner.spouse = agent;
+            agent.relationshipStatus = 'married';
+            agent.partner.relationshipStatus = 'married';
+            
+            rel.type = 'married';
+            rel.status = 'married';
+            
+            agent.addMemory(`Married ${agent.spouse.name}! 💍`, 'social');
+            agent.spouse.addMemory(`Married ${agent.name}! 💍`, 'social');
+            logEvent(`💍 ${agent.name} and ${agent.spouse.name} got married!`);
+            
+            // Add to each other's family (TODO 65)
+            if (!agent.family.includes(agent.spouse)) agent.family.push(agent.spouse);
+            if (!agent.spouse.family.includes(agent)) agent.spouse.family.push(agent);
+            
+            agent.partner = null;
+            agent.spouse.partner = null;
+          }
+        }
+        
+        // Update best friends (TODO 66)
+        agents.forEach(other => {
+          if (other === agent) return;
+          const rel = agent.getRelationship(other);
+          
+          if (rel.level > 70 && rel.type === 'best-friend') {
+            if (!agent.bestFriends.includes(other)) {
+              agent.bestFriends.push(other);
+            }
+          } else if (rel.level < 50) {
+            // Remove from best friends
+            const idx = agent.bestFriends.indexOf(other);
+            if (idx !== -1) agent.bestFriends.splice(idx, 1);
+          }
+        });
+      });
+    }
+
+    // ========================================
+    // GAME LOOP
+    // ========================================
+    function gameLoop() {
+      if (!isPaused) {
+        agents.forEach(a => a.update(1/60));
+        handleCollisions();
+        updateRelationships(); // TODO 61-67
+        
+        // Update particles
+        particles = particles.filter(p => {
+          p.update();
+          return !p.isDead();
+        });
+      }
+      
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ========================================
+    // CONTROLS
+    // ========================================
+    function togglePause() {
+      isPaused = !isPaused;
+    }
+
+    function setSpeed(speed) {
+      gameSpeed = speed;
+    }
+
+    // ========================================
+    // MOUSE INTERACTION
+    // ========================================
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Check if clicked on an agent
+      for (const agent of agents) {
+        const dist = Math.hypot(agent.x - x, agent.y - y);
+        if (dist < 32) {
+          selectedAgent = agent;
+          return;
+        }
+      }
+      
+      // Clicked elsewhere - deselect
+      selectedAgent = null;
+      document.getElementById('agent-panel').className = '';
+    });
+
+    // ========================================
+    // START
+    // ========================================
+    init();
+    gameLoop();
+  </script>
+</body>
+</html>

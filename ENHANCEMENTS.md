@@ -160,7 +160,7 @@ open public/pixel-world.html
 
 ## Next Steps
 
-- [ ] Integrate Codex search events
+- [ ] Integrate BlackRoad OS search events
 - [ ] Add traffic light status visualization
 - [ ] Create 3D WebGL renderer
 - [ ] Build mobile app (React Native)

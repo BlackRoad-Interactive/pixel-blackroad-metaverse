@@ -22,7 +22,7 @@ Successfully forked **pixelhq** into **pixel-blackroad-metaverse** - a BlackRoad
 #### New Features (Planned)
 - [ ] BlackRoad Memory System integration (`~/.blackroad/memory/`)
 - [ ] Multi-agent coordination visualization (27+ active agents)
-- [ ] Codex event broadcasting (22,244 components)
+- [ ] BlackRoad OS event broadcasting (22,244 components)
 - [ ] Traffic light system integration
 - [ ] BlackRoad color scheme (hot pink, amber, electric blue)
 - [ ] ESP32 LED matrix renderer
@@ -67,8 +67,8 @@ npm start
    - Track agent initialization, collaboration
    - Visualize agent locations in pixel world
 
-3. **Codex Events**
-   - Monitor codex searches
+3. **BlackRoad OS Events**
+   - Monitor blackroad os searches
    - Broadcast component discoveries
    - Show knowledge graph activity
 

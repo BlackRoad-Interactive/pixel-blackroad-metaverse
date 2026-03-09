@@ -12,7 +12,7 @@ A local bridge server that watches AI coding agent session files and broadcasts 
 
 - **Claude Code** — fully supported today
 - **Cursor** — coming soon
-- **Codex** — coming soon
+- **BlackRoad OS** — coming soon
 - **Antigravity** — coming soon
 - More to follow
 
